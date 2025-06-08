@@ -327,6 +327,7 @@ Once running, access the interactive API documentation:
    - Ensure proper environment variables are set
 
 ### Environment Variables Checklist
+- [ ] Placed env.py into migrations folder/replaced with env.py in migrations
 - [ ] Renamed `samconfig.txt` to `samconfig.toml`
 - [ ] Updated all placeholders in `samconfig.toml`
 - [ ] SUPABASE_URL
