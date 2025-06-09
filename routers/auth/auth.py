@@ -23,13 +23,9 @@ logger = logging.getLogger(__name__)
 # Create router
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
-# Security scheme for JWT tokens
 security = HTTPBearer()
-
-# Get Supabase client
 supabase = get_supabase_client()
 
-# Dependency to get current user from token
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: AsyncSession = Depends(get_db)
@@ -37,12 +33,9 @@ async def get_current_user(
     """Get current user from JWT token"""
     token = credentials.credentials
     
-    # Verify token with Supabase
-    supabase_user = auth_helpers.verify_token(token)
-    
-    # Get user profile from our database
+    supabase_user = auth_helpers.verify_token(token)  
     result = await db.execute(
-        select(UserProfile).where(UserProfile.id == supabase_user.id)
+        select(UserProfile).where(UserProfile.user_id == supabase_user.id)
     )
     user_profile = result.scalar_one_or_none()
     
@@ -71,7 +64,6 @@ async def register(
     3. Returns authentication tokens
     """
     try:
-        # Step 1: Check if username already exists in our database
         existing_user = await db.execute(
             select(UserProfile).where(UserProfile.username == user_data.username)
         )
@@ -79,16 +71,15 @@ async def register(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Username already taken"
-            )
-            
-        # Step 2: Register with Supabase Auth
+            )      
         auth_response = supabase.auth.sign_up({
             "email": user_data.email,
             "password": user_data.password,
             "options": {
                 "data": {
                     "username": user_data.username,
-                    "full_name": user_data.full_name
+                    "first_name": user_data.first_name,
+                    "last_name": user_data.last_name
                 }
             }
         })
@@ -97,40 +88,42 @@ async def register(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Failed to create user account"
-            )
-        
-        # Step 3: Create user profile in our database
+            )       
         supabase_user_id = auth_response.user.id
         new_user_profile = UserProfile(
-            id=supabase_user_id,  # Use Supabase user ID as primary key
-            email=user_data.email,
+            user_id=supabase_user_id,  
             username=user_data.username,
-            full_name=user_data.full_name,
-            created_at=datetime.utcnow()
+            first_name=user_data.first_name,
+            last_name=user_data.last_name
         )
         
         db.add(new_user_profile)
         await db.commit()
         await db.refresh(new_user_profile)
         
-        # Format response
         user_response = UserResponse(
-            id=new_user_profile.id,
-            email=new_user_profile.email,
+            id=str(new_user_profile.id),
+            user_id=str(new_user_profile.user_id),
             username=new_user_profile.username,
-            full_name=new_user_profile.full_name,
+            first_name=new_user_profile.first_name,
+            last_name=new_user_profile.last_name,
+            display_name=new_user_profile.display_name,
             bio=new_user_profile.bio,
-            profile_image_url=new_user_profile.profile_image_url,
+            avatar_url=new_user_profile.avatar_url,
+            custom_font=new_user_profile.custom_font,
+            custom_colors=new_user_profile.custom_colors,
+            date_of_birth=new_user_profile.date_of_birth,
+            timezone=new_user_profile.timezone,
+            language=new_user_profile.language,
+            preferences=new_user_profile.preferences,
             created_at=new_user_profile.created_at,
             updated_at=new_user_profile.updated_at
         )
         
-        # Check if session exists (it might be None if email confirmation is required)
         if auth_response.session is None:
-            # Return success but indicate email verification is needed
             return AuthResponse(
-                access_token="",  # Empty token
-                refresh_token="",  # Empty token
+                access_token="",  
+                refresh_token="",  
                 user=user_response,
                 message="User created successfully. Please check your email to verify your account before logging in."
             )
@@ -164,7 +157,6 @@ async def login(
     2. Returns authentication tokens and user profile
     """
     try:
-        # Login with Supabase
         auth_response = supabase.auth.sign_in_with_password({
             "email": user_data.email,
             "password": user_data.password
@@ -174,11 +166,9 @@ async def login(
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid email or password"
-            )
-        
-        # Get user profile from our database
+            )     
         result = await db.execute(
-            select(UserProfile).where(UserProfile.id == auth_response.user.id)
+            select(UserProfile).where(UserProfile.user_id == auth_response.user.id)
         )
         user_profile = result.scalar_one_or_none()
         
@@ -188,18 +178,25 @@ async def login(
                 detail="User profile not found"
             )
         
-        # Format response
         user_response = UserResponse(
-            id=user_profile.id,
-            email=user_profile.email,
+            id=str(user_profile.id),
+            user_id=str(user_profile.user_id),
             username=user_profile.username,
-            full_name=user_profile.full_name,
+            first_name=user_profile.first_name,
+            last_name=user_profile.last_name,
+            display_name=user_profile.display_name,
             bio=user_profile.bio,
-            profile_image_url=user_profile.profile_image_url,
+            avatar_url=user_profile.avatar_url,
+            custom_font=user_profile.custom_font,
+            custom_colors=user_profile.custom_colors,
+            date_of_birth=user_profile.date_of_birth,
+            timezone=user_profile.timezone,
+            language=user_profile.language,
+            preferences=user_profile.preferences,            
             created_at=user_profile.created_at,
             updated_at=user_profile.updated_at
         )
-        
+
         return AuthResponse(
             access_token=auth_response.session.access_token,
             refresh_token=auth_response.session.refresh_token,
@@ -248,12 +245,20 @@ async def get_current_user_profile(
     profile = current_user["profile"]
     
     return UserResponse(
-        id=profile.id,
-        email=profile.email,
+        id=str(profile.id),
+        user_id=str(profile.user_id),
         username=profile.username,
-        full_name=profile.full_name,
+        first_name=profile.first_name,
+        last_name=profile.last_name,
+        display_name=profile.display_name,
         bio=profile.bio,
-        profile_image_url=profile.profile_image_url,
+        avatar_url=profile.avatar_url,
+        custom_font=profile.custom_font,
+        custom_colors=profile.custom_colors,
+        date_of_birth=profile.date_of_birth,
+        timezone=profile.timezone,
+        language=profile.language,
+        preferences=profile.preferences,
         created_at=profile.created_at,
         updated_at=profile.updated_at
     )
@@ -269,24 +274,19 @@ async def forgot_password(
     The email will contain a link that redirects to your frontend with the necessary tokens.
     
     The redirect URL is automatically determined based on the environment:
-    - Production: https://yourblog.com/reset-password
+    - Production: https://yourdomain.com/reset-password
     - Development: http://localhost:3000/reset-password
     """
     try:
-        # Determine redirect URL based on environment
         from config import ENVIRONMENT
         
         if ENVIRONMENT == "prod":
-            # Production frontend URL
             redirect_url = "https://yourblog.com/reset-password"
         elif ENVIRONMENT == "dev":
-            # Development frontend URL
             redirect_url = "http://localhost:3000/reset-password"
         else:
-            # Fallback for testing
             redirect_url = "http://localhost:3000/reset-password"
         
-        # Send password reset email via Supabase
         response = supabase.auth.reset_password_email(
             request_data.email,
             options={"redirect_to": redirect_url}
@@ -296,7 +296,6 @@ async def forgot_password(
         
     except Exception as e:
         logger.error(f"Password reset email failed: {str(e)}")
-        # Always return success for security (don't reveal if email exists)
         return {"message": "If an account with that email exists, a password reset link has been sent."}
 
 @router.post("/reset-password")
@@ -310,14 +309,11 @@ async def reset_password(
     they received in their password reset email.
     """
     try:
-        # First, we need to establish a session with the provided tokens
-        # Set the session in the Supabase client
         session_data = {
             "access_token": reset_data.access_token,
             "refresh_token": reset_data.refresh_token
         }
         
-        # Set the session to authenticate the password update
         response = supabase.auth.set_session(
             access_token=reset_data.access_token,
             refresh_token=reset_data.refresh_token
@@ -329,7 +325,6 @@ async def reset_password(
                 detail="Invalid or expired reset tokens"
             )
         
-        # Now update the password
         update_response = supabase.auth.update_user({
             "password": reset_data.new_password
         })
@@ -340,7 +335,6 @@ async def reset_password(
                 detail="Failed to update password"
             )
         
-        # Sign out to invalidate the reset session
         supabase.auth.sign_out()
         
         return {"message": "Password reset successfully. You can now log in with your new password."}
@@ -363,15 +357,13 @@ async def logout(
     """
     try:
         token = credentials.credentials
-        
-        # Sign out from Supabase (this invalidates the token)
         supabase.auth.sign_out()
         
         return {"message": "Successfully logged out"}
         
     except Exception as e:
         logger.error(f"Logout failed: {str(e)}")
-        return {"message": "Logout completed"}  # Always return success for logout
+        return {"message": "Logout completed"}  
 
 @router.get("/verify-reset-token")
 async def verify_reset_token(
@@ -386,7 +378,6 @@ async def verify_reset_token(
     and call this endpoint to verify them before showing the password reset form.
     """
     try:
-        # Try to set the session with the provided tokens
         response = supabase.auth.set_session(
             access_token=access_token,
             refresh_token=refresh_token
@@ -398,7 +389,6 @@ async def verify_reset_token(
                 detail="Invalid or expired reset tokens"
             )
         
-        # Sign out immediately after verification
         supabase.auth.sign_out()
         
         return {

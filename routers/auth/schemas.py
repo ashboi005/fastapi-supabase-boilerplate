@@ -7,7 +7,8 @@ class UserRegister(BaseModel):
     email: EmailStr
     password: str
     username: str
-    full_name: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -15,21 +16,29 @@ class UserLogin(BaseModel):
 
 # Response schemas
 class UserResponse(BaseModel):
-    id: str  # This will be the Supabase Auth user ID
-    email: str
-    username: str
-    full_name: Optional[str] = None
+    id: str  
+    user_id: str 
+    username: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    display_name: Optional[str] = None
     bio: Optional[str] = None
-    profile_image_url: Optional[str] = None
+    avatar_url: Optional[str] = None
+    custom_font: Optional[str] = None
+    custom_colors: Optional[str] = None
+    date_of_birth: Optional[datetime] = None
+    timezone: Optional[str] = None
+    language: Optional[str] = None
+    preferences: Optional[dict] = None
     created_at: datetime
-    updated_at: Optional[datetime] = None
+    updated_at: datetime
 
 class AuthResponse(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
     user: UserResponse
-    message: Optional[str] = None  # For email verification messages
+    message: Optional[str] = None 
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -40,4 +49,4 @@ class ForgotPasswordRequest(BaseModel):
 class ResetPasswordRequest(BaseModel):
     new_password: str
     access_token: str
-    refresh_token: str  # Also need refresh token for proper reset
+    refresh_token: str  

@@ -9,7 +9,6 @@ class AuthHelpers:
     """Helper functions for authentication operations"""
     
     def __init__(self):
-        # Initialize clients lazily to avoid Lambda initialization issues
         self._supabase = None
         self._admin_client = None
     
@@ -63,5 +62,4 @@ class AuthHelpers:
                 detail="Invalid refresh token"
             )
 
-# Create a single instance to use throughout the app
 auth_helpers = AuthHelpers()

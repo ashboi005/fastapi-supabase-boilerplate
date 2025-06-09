@@ -6,14 +6,14 @@ from fastapi import Request, HTTPException
 import os
 
 from routers.auth.auth import router as auth_router
-
+from routers.users.users import router as users_router
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "dev")
 IS_PRODUCTION = ENVIRONMENT == "prod"
 
 app = FastAPI(
-    title="FastAPI Boilerplate with Supabase",
-    description="A comprehensive API boilerplate using FastAPI and Supabase",
+    title="Blogging Site API",
+    description="A comprehensive API for a blogging website",
     version="1.0.0",
     root_path="/Prod" if IS_PRODUCTION else "",
     docs_url="/apidocs",
@@ -34,8 +34,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 app.include_router(auth_router)
+app.include_router(users_router)
 
 @app.get("/docs", include_in_schema=False)
 async def api_documentation(request: Request):
@@ -48,7 +48,7 @@ async def api_documentation(request: Request):
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>FASTAPI BOILERPLATE WITH SUPABASE API DOCS</title>
+    <title>BLOGGING SITE API DOCS</title>
 
     <script src="https://unpkg.com/@stoplight/elements/web-components.min.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/@stoplight/elements/styles.min.css">
@@ -67,7 +67,7 @@ async def api_documentation(request: Request):
 
 @app.get("/", response_class=HTMLResponse)
 def home():
-    """This is the first and default route for the App"""
+    """This is the first and default route for the Blogging Site Backend"""
     return """
     <html>
       <head>
@@ -84,7 +84,7 @@ def home():
         </style>
       </head>
       <body>
-        <h1>Welcome to FastAPI Boilerplate with Supabase API</h1>
+        <h1>Welcome to Blogging Site API</h1>
         <hr>
         <ul>
           <li><a href="/docs">Spotlight API Documentation</a></li>
@@ -94,7 +94,7 @@ def home():
           <hr>
           <li><a href="http://localhost:3000">Frontend Website</a></li>
           <hr>
-          <h2>Built with FastAPI & Supabase</h2>
+          <h2>Blogging Platform API - Built with FastAPI & Supabase</h2>
         </ul>
       </body>
     </html>
