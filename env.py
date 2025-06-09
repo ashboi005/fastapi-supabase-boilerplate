@@ -56,12 +56,13 @@ def run_migrations_online() -> None:
             context.run_migrations()
 
 def include_object(object, name, type_, reflected, compare_to):
-    """
-    Filter function to exclude auth schema from migrations.
-    We don't want Alembic to manage the auth schema since it's managed by Supabase.
-    """
-
-    if hasattr(object, 'schema') and object.schema == 'auth':
+    supabase_schemas = {'auth', 'storage', 'realtime', 'vault', 'supabase_functions', 'extensions', 'graphql', 'graphql_public', 'pgsodium', 'pgsodium_masks'}
+    
+    if hasattr(object, 'schema') and object.schema in supabase_schemas:
+        return False
+    
+    supabase_tables = {'schema_migrations', 'supabase_migrations'}
+    if type_ == "table" and name in supabase_tables:
         return False
     
     return True
