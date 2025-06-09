@@ -32,7 +32,7 @@ A complete FastAPI backend boilerplate with Supabase authentication, PostgreSQL 
 ### 1. Clone and Initial Configuration
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/ashboi005/fastapi-supabase-boilerplate
 cd fastapi-supabase-boilerplate
 ```
 
