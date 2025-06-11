@@ -87,10 +87,10 @@ def home():
         <h1>Welcome to Blogging Site API</h1>
         <hr>
         <ul>
-          <li><a href="/docs">Spotlight API Documentation</a></li>
-          <li><a href="/redoc">Redoc API Documentation</a></li>
-          <li><a href="/apidocs">Swagger API Documentation</a></li>
-          <li><a href="/openapi.json">OpenAPI Specification</a></li>
+          <li><a href="/Prod/docs">Spotlight API Documentation</a></li>
+          <li><a href="/Prod/redoc">Redoc API Documentation</a></li>
+          <li><a href="/Prod/apidocs">Swagger API Documentation</a></li>
+          <li><a href="/Prod/openapi.json">OpenAPI Specification</a></li>
           <hr>
           <li><a href="http://localhost:3000">Frontend Website</a></li>
           <hr>
