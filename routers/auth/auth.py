@@ -55,14 +55,6 @@ async def register(
     user_data: UserRegister,
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    Register a new user
-    
-    This endpoint:
-    1. Creates a user account in Supabase Auth
-    2. Creates a user profile in our database
-    3. Returns authentication tokens
-    """
     try:
         existing_user = await db.execute(
             select(UserProfile).where(UserProfile.username == user_data.username)
@@ -110,8 +102,6 @@ async def register(
             display_name=new_user_profile.display_name,
             bio=new_user_profile.bio,
             avatar_url=new_user_profile.avatar_url,
-            custom_font=new_user_profile.custom_font,
-            custom_colors=new_user_profile.custom_colors,
             date_of_birth=new_user_profile.date_of_birth,
             timezone=new_user_profile.timezone,
             language=new_user_profile.language,
@@ -149,13 +139,6 @@ async def login(
     user_data: UserLogin,
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    Login user
-    
-    This endpoint:
-    1. Authenticates user with Supabase Auth
-    2. Returns authentication tokens and user profile
-    """
     try:
         auth_response = supabase.auth.sign_in_with_password({
             "email": user_data.email,
@@ -187,8 +170,6 @@ async def login(
             display_name=user_profile.display_name,
             bio=user_profile.bio,
             avatar_url=user_profile.avatar_url,
-            custom_font=user_profile.custom_font,
-            custom_colors=user_profile.custom_colors,
             date_of_birth=user_profile.date_of_birth,
             timezone=user_profile.timezone,
             language=user_profile.language,
@@ -216,9 +197,6 @@ async def login(
 async def refresh_token(
     refresh_token: str
 ):
-    """
-    Refresh access token using refresh token
-    """
     try:
         session = await auth_helpers.refresh_token(refresh_token)
         
@@ -235,53 +213,15 @@ async def refresh_token(
             detail="Token refresh failed"
         )
 
-@router.get("/me", response_model=UserResponse)
-async def get_current_user_profile(
-    current_user = Depends(get_current_user)
-):
-    """
-    Get current user's profile
-    """
-    profile = current_user["profile"]
-    
-    return UserResponse(
-        id=str(profile.id),
-        user_id=str(profile.user_id),
-        username=profile.username,
-        first_name=profile.first_name,
-        last_name=profile.last_name,
-        display_name=profile.display_name,
-        bio=profile.bio,
-        avatar_url=profile.avatar_url,
-        custom_font=profile.custom_font,
-        custom_colors=profile.custom_colors,
-        date_of_birth=profile.date_of_birth,
-        timezone=profile.timezone,
-        language=profile.language,
-        preferences=profile.preferences,
-        created_at=profile.created_at,
-        updated_at=profile.updated_at
-    )
-
 @router.post("/forgot-password")
 async def forgot_password(
     request_data: ForgotPasswordRequest
 ):
-    """
-    Send password reset email
-    
-    This endpoint sends a password reset email to the user's email address.
-    The email will contain a link that redirects to your frontend with the necessary tokens.
-    
-    The redirect URL is automatically determined based on the environment:
-    - Production: https://yourdomain.com/reset-password
-    - Development: http://localhost:3000/reset-password
-    """
     try:
         from config import ENVIRONMENT
         
         if ENVIRONMENT == "prod":
-            redirect_url = "https://yourblog.com/reset-password"
+            redirect_url = "https://yourdomain.com/reset-password"
         elif ENVIRONMENT == "dev":
             redirect_url = "http://localhost:3000/reset-password"
         else:
@@ -297,17 +237,42 @@ async def forgot_password(
     except Exception as e:
         logger.error(f"Password reset email failed: {str(e)}")
         return {"message": "If an account with that email exists, a password reset link has been sent."}
+    
+@router.get("/verify-reset-token")
+async def verify_reset_token(
+    access_token: str,
+    refresh_token: str
+):
+    try:
+        response = supabase.auth.set_session(
+            access_token=access_token,
+            refresh_token=refresh_token
+        )
+        
+        if not response.session:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired reset tokens"
+            )
+        
+        supabase.auth.sign_out()
+        
+        return {
+            "message": "Reset tokens are valid",
+            "email": response.user.email if response.user else None
+        }
+        
+    except Exception as e:
+        logger.error(f"Token verification failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset tokens"
+        )
 
 @router.post("/reset-password")
 async def reset_password(
     reset_data: ResetPasswordRequest
 ):
-    """
-    Reset password using the tokens from reset email
-    
-    This endpoint allows users to set a new password using the tokens
-    they received in their password reset email.
-    """
     try:
         session_data = {
             "access_token": reset_data.access_token,
@@ -352,9 +317,6 @@ async def reset_password(
 async def logout(
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ):
-    """
-    Logout user (invalidate token on Supabase)
-    """
     try:
         token = credentials.credentials
         supabase.auth.sign_out()
@@ -365,40 +327,3 @@ async def logout(
         logger.error(f"Logout failed: {str(e)}")
         return {"message": "Logout completed"}  
 
-@router.get("/verify-reset-token")
-async def verify_reset_token(
-    access_token: str,
-    refresh_token: str
-):
-    """
-    Verify reset tokens from email redirect
-    
-    This endpoint helps verify that the tokens from the password reset email are valid.
-    Frontend should extract access_token and refresh_token from the URL parameters
-    and call this endpoint to verify them before showing the password reset form.
-    """
-    try:
-        response = supabase.auth.set_session(
-            access_token=access_token,
-            refresh_token=refresh_token
-        )
-        
-        if not response.session:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid or expired reset tokens"
-            )
-        
-        supabase.auth.sign_out()
-        
-        return {
-            "message": "Reset tokens are valid",
-            "email": response.user.email if response.user else None
-        }
-        
-    except Exception as e:
-        logger.error(f"Token verification failed: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired reset tokens"
-        )

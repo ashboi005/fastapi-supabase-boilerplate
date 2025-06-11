@@ -224,7 +224,7 @@ class UserProfile(Base):
 
 ## 📦 Deployment
 
-### AWS Lambda Deployment
+### AWS Lambda Deployment with Docker Integration
 
 **Important**: Make sure you've completed the samconfig setup from Step 1 before deploying!
 
@@ -238,25 +238,41 @@ aws configure
    - Double-check all placeholder values have been replaced
    - Ensure your AWS credentials and region are correct
 
-3. **Build and Deploy**:
+3. **Build and Deploy with Docker Integration**:
+   
+   **For first-time deployment:**
+   ```powershell
+   # Build the application (Docker image will be built automatically)
+   sam build
+   
+   # Deploy with image repository resolution and your AWS profile
+   sam deploy --resolve-image-repos --profile your-aws-profile
+   ```
+   
+   **For subsequent deployments:**
+   ```powershell
+   # Build the application
+   sam build
+   
+   # Deploy using existing configuration
+   sam deploy --profile your-aws-profile
+   ```
+
+   **Note**: 
+   - SAM automatically builds the Docker image when you run `sam build`
+   - The `--resolve-image-repos` flag creates ECR repositories for your Docker images if they don't exist
+   - Replace `your-aws-profile` with your actual AWS CLI profile name
+
+4. **Local Testing with SAM and Docker**:
 ```powershell
+# Build the application
 sam build
-sam deploy --guided
-```
 
-4. **For subsequent deployments** (after first deployment):
-```powershell
-sam build
-sam deploy
-```
-
-**Note**: During your first `sam deploy --guided`, SAM will use the parameters from your `samconfig.toml` file and may prompt for additional confirmations.
-
-### Local Testing with SAM
-
-```powershell
-sam build
+# Start local API Gateway with Docker container
 sam local start-api
+
+# Test a specific function
+sam local invoke FastApiFunction
 ```
 
 ## 🔧 Configuration Details

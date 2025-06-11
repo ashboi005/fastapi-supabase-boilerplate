@@ -24,8 +24,6 @@ class UserResponse(BaseModel):
     display_name: Optional[str] = None
     bio: Optional[str] = None
     avatar_url: Optional[str] = None
-    custom_font: Optional[str] = None
-    custom_colors: Optional[str] = None
     date_of_birth: Optional[datetime] = None
     timezone: Optional[str] = None
     language: Optional[str] = None

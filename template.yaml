@@ -26,7 +26,8 @@ Parameters:
     Type: String
     Description: "JWT secret key for token signing"
     NoEcho: true
-      SupabaseStorageBucket:
+    
+  SupabaseStorageBucket:
     Type: String
     Description: "Supabase storage bucket name"
     Default: "your-storage-bucket"
@@ -35,10 +36,10 @@ Resources:
   FastApiFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: main.handler
-      Runtime: python3.11
-      CodeUri: .
-      MemorySize: 1024
+      PackageType: Image
+      ImageConfig:
+        Command: ["lambda_function.lambda_handler"]
+      MemorySize: 2048
       Timeout: 30
       Environment:
         Variables:
@@ -54,13 +55,18 @@ Resources:
           Type: Api
           Properties:
             Path: "/{proxy+}"
-            Method: ANY            RestApiId: !Ref ApiGateway
+            Method: ANY
+            RestApiId: !Ref ApiGateway
         RootApiEvent:
           Type: Api
           Properties:
             Path: "/"
             Method: ANY
             RestApiId: !Ref ApiGateway
+    Metadata:
+      DockerTag: python3.11-v1
+      DockerContext: .
+      Dockerfile: Dockerfile
 
   ApiGateway:
     Type: AWS::Serverless::Api
