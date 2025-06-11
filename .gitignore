@@ -6,7 +6,7 @@
 .env.production.local
 
 # Byte-compiled / optimized / DLL files
-__pycache__/
+_pycache_/
 *.py[cod]
 *$py.class
 
@@ -99,7 +99,7 @@ ipython_config.py
 #Pipfile.lock
 
 # PEP 582; used by e.g. github.com/David-OConnor/pyflow
-__pypackages__/
+_pypackages_/
 
 # Celery stuff
 celerybeat-schedule
@@ -168,3 +168,22 @@ temp/
 # Media files (if storing locally for development)
 media/
 uploads/
+
+# AWS SAM and deployment files
+.aws-sam/
+samconfig.toml
+template.yaml
+Dockerfile
+lambda_function.py
+.dockerignore
+
+# AWS credentials and config
+.aws/
+*.pem
+*.key
+
+# Terraform (if used later)
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+.terraform/
