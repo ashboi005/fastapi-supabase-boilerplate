@@ -11,6 +11,7 @@ from .schemas import (
     UserResponse,
     TokenResponse,
     ForgotPasswordRequest,
+    VerifyResetTokenRequest,
     ResetPasswordRequest
 )
 from .helpers import auth_helpers
@@ -238,15 +239,14 @@ async def forgot_password(
         logger.error(f"Password reset email failed: {str(e)}")
         return {"message": "If an account with that email exists, a password reset link has been sent."}
     
-@router.get("/verify-reset-token")
+@router.post("/verify-reset-token")
 async def verify_reset_token(
-    access_token: str,
-    refresh_token: str
+    token_data: VerifyResetTokenRequest
 ):
     try:
         response = supabase.auth.set_session(
-            access_token=access_token,
-            refresh_token=refresh_token
+            access_token=token_data.access_token,
+            refresh_token=token_data.refresh_token
         )
         
         if not response.session:
@@ -255,7 +255,6 @@ async def verify_reset_token(
                 detail="Invalid or expired reset tokens"
             )
         
-        supabase.auth.sign_out()
         
         return {
             "message": "Reset tokens are valid",
@@ -268,6 +267,7 @@ async def verify_reset_token(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired reset tokens"
         )
+
 
 @router.post("/reset-password")
 async def reset_password(

@@ -44,6 +44,10 @@ class TokenResponse(BaseModel):
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr
 
+class VerifyResetTokenRequest(BaseModel):
+    access_token: str
+    refresh_token: str
+
 class ResetPasswordRequest(BaseModel):
     new_password: str
     access_token: str
