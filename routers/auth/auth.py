@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -21,13 +21,13 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Create router
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 security = HTTPBearer()
 supabase = get_supabase_client()
 
 async def get_current_user(
+    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: AsyncSession = Depends(get_db)
 ):
@@ -46,10 +46,14 @@ async def get_current_user(
             detail="User profile not found"
         )
     
-    return {
+    current_user = {
         "supabase_user": supabase_user,
         "profile": user_profile
     }
+    
+    request.state.current_user = current_user
+    
+    return current_user
 
 @router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
 async def register(
@@ -93,7 +97,6 @@ async def register(
         db.add(new_user_profile)
         await db.commit()
         await db.refresh(new_user_profile)
-        
         user_response = UserResponse(
             id=str(new_user_profile.id),
             user_id=str(new_user_profile.user_id),
@@ -103,6 +106,7 @@ async def register(
             display_name=new_user_profile.display_name,
             bio=new_user_profile.bio,
             avatar_url=new_user_profile.avatar_url,
+            role=new_user_profile.role,
             date_of_birth=new_user_profile.date_of_birth,
             timezone=new_user_profile.timezone,
             language=new_user_profile.language,
@@ -161,7 +165,6 @@ async def login(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User profile not found"
             )
-        
         user_response = UserResponse(
             id=str(user_profile.id),
             user_id=str(user_profile.user_id),
@@ -171,6 +174,7 @@ async def login(
             display_name=user_profile.display_name,
             bio=user_profile.bio,
             avatar_url=user_profile.avatar_url,
+            role=user_profile.role,
             date_of_birth=user_profile.date_of_birth,
             timezone=user_profile.timezone,
             language=user_profile.language,
@@ -267,7 +271,6 @@ async def verify_reset_token(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired reset tokens"
         )
-
 
 @router.post("/reset-password")
 async def reset_password(

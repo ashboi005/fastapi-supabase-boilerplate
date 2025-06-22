@@ -7,6 +7,7 @@ import os
 
 from routers.auth.auth import router as auth_router
 from routers.users.users import router as users_router
+from routers.admin.admin import router as admin_router
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "dev")
 IS_PRODUCTION = ENVIRONMENT == "prod"
@@ -36,6 +37,7 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(users_router)
+app.include_router(admin_router)
 
 @app.get("/docs", include_in_schema=False)
 async def api_documentation(request: Request):
@@ -87,10 +89,10 @@ def home():
         <h1>Welcome to Blogging Site API</h1>
         <hr>
         <ul>
-          <li><a href="/Prod/docs">Spotlight API Documentation</a></li>
-          <li><a href="/Prod/redoc">Redoc API Documentation</a></li>
-          <li><a href="/Prod/apidocs">Swagger API Documentation</a></li>
-          <li><a href="/Prod/openapi.json">OpenAPI Specification</a></li>
+          <li><a href="/docs">Spotlight API Documentation</a></li>
+          <li><a href="/redoc">Redoc API Documentation</a></li>
+          <li><a href="/apidocs">Swagger API Documentation</a></li>
+          <li><a href="/openapi.json">OpenAPI Specification</a></li>
           <hr>
           <li><a href="http://localhost:3000">Frontend Website</a></li>
           <hr>

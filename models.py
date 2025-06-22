@@ -144,6 +144,10 @@ class UserProfile(Base):
     display_name: Mapped[Optional[str]] = mapped_column(String(100))
     bio: Mapped[Optional[str]] = mapped_column(Text)
     avatar_url: Mapped[Optional[str]] = mapped_column(String(500))
+    
+    # Role-based access control
+    role: Mapped[str] = mapped_column(String(50), default="user", nullable=False)
+    
     date_of_birth: Mapped[Optional[DateTime]] = mapped_column(DateTime(True))
     timezone: Mapped[Optional[str]] = mapped_column(String(50))
     language: Mapped[Optional[str]] = mapped_column(String(10), default="en")
