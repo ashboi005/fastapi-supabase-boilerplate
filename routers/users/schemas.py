@@ -38,6 +38,27 @@ class UserProfileResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class UserResponse(BaseModel):
+    id: str  
+    user_id: str 
+    email: str 
+    username: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    display_name: Optional[str] = None
+    bio: Optional[str] = None
+    avatar_url: Optional[str] = None
+    role: str = "user"  
+    date_of_birth: Optional[datetime] = None
+    timezone: Optional[str] = None
+    language: Optional[str] = None
+    preferences: Optional[dict] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
 class UserProfilePublic(BaseModel):
     """Public profile information (without email)"""
     id: str
@@ -56,3 +77,25 @@ class UserProfilePublic(BaseModel):
 
     class Config:
         from_attributes = True
+
+class UserListItem(BaseModel):
+    """Simplified user model for admin list endpoints"""
+    id: str
+    user_id: str
+    username: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    display_name: Optional[str] = None
+    role: str = "user"
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class UserListResponse(BaseModel):
+    """Response schema for paginated user list"""
+    users: list[UserListItem]
+    page: int
+    limit: int
+    total: int

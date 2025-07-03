@@ -25,6 +25,11 @@ RESOURCES_FOR_ROLES = {
         'content': ['read', 'write'], 
         'reports': ['read'],  
     },
+    'agent': {
+        'users/me': ['read', 'write'], 
+        'users/profiles': ['read'], 
+        'content': ['read', 'write'],  
+    },
     'user': {
         'users/me': ['read', 'write'], 
         'users/profiles': ['read'], 
@@ -119,14 +124,12 @@ def require_permission(resource: str = None, permission: str = None):
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Authentication required"
                 )
-            
-            user_role = 'user'
-            if isinstance(current_user, dict):
-                profile = current_user.get('profile')
-                if profile:
-                    user_role = getattr(profile, 'role', 'user')
+
+            user_role = 'agent'  # default fallback to match registration default
+            if isinstance(current_user, dict) and 'role' in current_user:
+                user_role = current_user['role']
             else:
-                user_role = getattr(current_user, 'role', 'user')
+                user_role = getattr(current_user, 'role', 'agent')
 
             resource_name = resource or normalize_path(str(request.url.path))
             required_permission = permission or translate_method_to_action(request.method)

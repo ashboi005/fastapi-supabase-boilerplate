@@ -33,26 +33,18 @@ async def get_current_user(
 ):
     """Get current user from JWT token"""
     token = credentials.credentials
-    
     supabase_user = auth_helpers.verify_token(token)  
-    result = await db.execute(
-        select(UserProfile).where(UserProfile.user_id == supabase_user.id)
-    )
-    user_profile = result.scalar_one_or_none()
     
-    if not user_profile:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User profile not found"
-        )
-    
-    current_user = {
-        "supabase_user": supabase_user,
-        "profile": user_profile
-    }
-    
+    if supabase_user.role:
+        current_user = {
+            "user_id": supabase_user.id,
+            "email": supabase_user.email,
+            "role": supabase_user.role
+        }
+        logger.info(f"User {supabase_user.id} authenticated via JWT role: {supabase_user.role}")
+        
+
     request.state.current_user = current_user
-    
     return current_user
 
 @router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
@@ -76,7 +68,8 @@ async def register(
                 "data": {
                     "username": user_data.username,
                     "first_name": user_data.first_name,
-                    "last_name": user_data.last_name
+                    "last_name": user_data.last_name,
+                    "role": "user"  
                 }
             }
         })
@@ -97,23 +90,15 @@ async def register(
         db.add(new_user_profile)
         await db.commit()
         await db.refresh(new_user_profile)
-        user_response = UserResponse(
-            id=str(new_user_profile.id),
-            user_id=str(new_user_profile.user_id),
-            username=new_user_profile.username,
-            first_name=new_user_profile.first_name,
-            last_name=new_user_profile.last_name,
-            display_name=new_user_profile.display_name,
-            bio=new_user_profile.bio,
-            avatar_url=new_user_profile.avatar_url,
-            role=new_user_profile.role,
-            date_of_birth=new_user_profile.date_of_birth,
-            timezone=new_user_profile.timezone,
-            language=new_user_profile.language,
-            preferences=new_user_profile.preferences,
-            created_at=new_user_profile.created_at,
-            updated_at=new_user_profile.updated_at
-        )
+        
+        user_data = {
+            **new_user_profile.__dict__,  
+            "user_id": str(new_user_profile.user_id),
+            "email": auth_response.user.email,
+            "role": new_user_profile.role
+        }
+        
+        user_response = UserResponse.model_validate(user_data)
         
         if auth_response.session is None:
             return AuthResponse(
@@ -155,38 +140,10 @@ async def login(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid email or password"
             )     
-        result = await db.execute(
-            select(UserProfile).where(UserProfile.user_id == auth_response.user.id)
-        )
-        user_profile = result.scalar_one_or_none()
-        
-        if not user_profile:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User profile not found"
-            )
-        user_response = UserResponse(
-            id=str(user_profile.id),
-            user_id=str(user_profile.user_id),
-            username=user_profile.username,
-            first_name=user_profile.first_name,
-            last_name=user_profile.last_name,
-            display_name=user_profile.display_name,
-            bio=user_profile.bio,
-            avatar_url=user_profile.avatar_url,
-            role=user_profile.role,
-            date_of_birth=user_profile.date_of_birth,
-            timezone=user_profile.timezone,
-            language=user_profile.language,
-            preferences=user_profile.preferences,            
-            created_at=user_profile.created_at,
-            updated_at=user_profile.updated_at
-        )
-
+       
         return AuthResponse(
             access_token=auth_response.session.access_token,
             refresh_token=auth_response.session.refresh_token,
-            user=user_response
         )
         
     except Exception as e:
@@ -328,5 +285,5 @@ async def logout(
         
     except Exception as e:
         logger.error(f"Logout failed: {str(e)}")
-        return {"message": "Logout completed"}  
+        return {"message": "Logout completed"}
 
