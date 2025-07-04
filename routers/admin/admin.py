@@ -4,7 +4,7 @@ from routers.auth.auth import get_current_user
 from routers.users.schemas import UserListItem, UserListResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from config import get_db
+from config import get_db, get_supabase_client
 from models import UserProfile
 from typing import Optional
 from datetime import datetime
@@ -13,6 +13,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
+supabase = get_supabase_client()
 
 @router.get("/users", response_model=UserListResponse, dependencies=[Depends(require_user_management)])
 async def list_all_users(
@@ -55,7 +56,7 @@ async def list_all_users(
 @router.put("/users/{user_id}/role", dependencies=[Depends(require_user_management_write)])
 async def update_user_role(
     user_id: str,
-    new_role: str = Form(..., description="New role: user, moderator, admin, agent"),
+    new_role: str = Form(..., description="New role: user, admin"),
     db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
@@ -63,10 +64,10 @@ async def update_user_role(
     Admin only: Update user role
     """
     try:
-        if new_role not in ['user', 'moderator', 'admin', 'agent']:
+        if new_role not in ['user', 'admin']:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid role. Must be one of: user, moderator, admin, agent"
+                detail="Invalid role. Must be one of: user, admin"
             )
         
         result = await db.execute(
@@ -80,17 +81,39 @@ async def update_user_role(
                 detail="User not found"
             )
         
+        old_role = user_profile.role
         user_profile.role = new_role
         user_profile.updated_at = datetime.utcnow()
+
+        metadata_updated = False
+        try:
+            supabase.auth.admin.update_user_by_id(
+                user_id,
+                {
+                    "user_metadata": {
+                        "role": new_role,
+                        "username": user_profile.username,
+                        "first_name": user_profile.first_name,
+                        "last_name": user_profile.last_name,
+                    }
+                }
+            )
+            metadata_updated = True
+            logger.info(f"Updated Supabase user metadata for {user_id} with role: {new_role}")
+        except Exception as supabase_error:
+            logger.error(f"Failed to update Supabase metadata: {str(supabase_error)}")
         
         await db.commit()
         await db.refresh(user_profile)
         
         return {
-            "message": f"User role updated to {new_role}",
+            "message": f"User role updated from {old_role} to {new_role}",
             "user_id": user_id,
+            "old_role": old_role,
             "new_role": new_role,
-            "updated_by": current_user["role"]
+            "updated_by": current_user["role"],
+            "metadata_updated": metadata_updated,
+            "note": "Role will be available in JWT tokens after next login" if metadata_updated else "Role updated in database only"
         }
         
     except Exception as e:
